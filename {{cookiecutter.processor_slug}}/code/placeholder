@@ -1,0 +1,9 @@
+Put your processor code here.
+
+This directory MUST contain a file named "Dockerfile". The pipeline builds
+./code/Dockerfile to produce the processor image.
+
+The Dockerfile ENTRYPOINT/baseCommand must match the "baseCommand" in the
+.cwl file at the repo root.
+
+Delete this placeholder once you have added your Dockerfile.

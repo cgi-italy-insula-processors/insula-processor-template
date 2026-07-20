@@ -1,0 +1,7 @@
+{
+  "processor_name": "My EO Processor",
+  "processor_slug": "{{ cookiecutter.processor_name.lower().replace(' ', '-').replace('_', '-') }}",
+  "processor_description": "Short description of what this processor does",
+  "processor_version": "1.0.0",
+  "keywords": "earth-observation, processing"
+}

@@ -32,10 +32,18 @@ slug containing:
 2. Edit `<processor_slug>.cwl` so its inputs/outputs match your processor. Leave
    `dockerPull: __IMAGE__` as is: the pipeline replaces it with the published image.
 3. Create a PUBLIC GitHub repo under your own account, push this content.
-4. Build and deploy with the CLI:
+4. Install the builder CLI (once) and authenticate:
+   ```
+   pipx install git+https://github.com/cgi-italy-insula-processors/insula-processors-builder-cli
+   insula-processors-builder login          # GitHub device flow, no token to create
+   export INSULA_API_TOKEN=<your insula.earth api token>
+   ```
+   You must first be granted access by a maintainer (they add you to the launcher).
+5. Build and deploy with the CLI:
    ```
    insula-processors-builder create --repo-url https://github.com/<you>/<processor_slug>
    ```
+6. Iterate: push changes, run the command again.
 
 ## CWL notes (what Insula supports)
 

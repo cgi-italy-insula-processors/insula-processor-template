@@ -34,7 +34,7 @@ slug containing:
 3. Create a PUBLIC GitHub repo under your own account, push this content.
 4. Build and deploy with the CLI:
    ```
-   insula-processor create --repo-url https://github.com/<you>/<processor_slug>
+   insula-processors-builder create --repo-url https://github.com/<you>/<processor_slug>
    ```
 
 ## CWL notes (what Insula supports)

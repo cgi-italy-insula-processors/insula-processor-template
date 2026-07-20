@@ -13,10 +13,10 @@ Insula processor pipeline.
 ## Build and deploy
 
 This repository has no CI of its own. Build and deploy it with the
-insula-processor CLI (the repo must be public):
+insula-processors-builder CLI (the repo must be public):
 
 ```
-insula-processor create --repo-url https://github.com/<you>/{{cookiecutter.processor_slug}}
+insula-processors-builder create --repo-url https://github.com/<you>/{{cookiecutter.processor_slug}}
 ```
 
 The pipeline clones this repo, builds `code/Dockerfile`, scans and publishes the

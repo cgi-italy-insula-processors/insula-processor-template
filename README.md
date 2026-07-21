@@ -25,10 +25,39 @@ slug containing:
 └── <processor_slug>.cwl   # OGC Application Package (edit inputs/outputs)
 ```
 
+## Base image constraint (read first)
+
+The Dockerfile `FROM` MUST be a **public** image (Docker Hub, quay.io, ghcr.io, ...).
+The build pipeline is public and cannot be given private-registry credentials, so a
+private base image fails the build with a 401. This is the most common first-run
+failure - decide your base image accordingly.
+
+## Base image vulnerabilities (the scan gate)
+
+The pipeline scans the built image with Grype and Trivy and BLOCKS publishing on
+any HIGH/CRITICAL vulnerability - including ones that have no upstream fix yet.
+In practice most findings come from the base image, not from your code. If your
+build is blocked:
+
+1. **Prefer a slim/minimal base.** `python:3.12-slim` instead of `python:3.12`,
+   `debian:stable-slim` instead of `debian:stable`, alpine or distroless variants
+   where your stack allows. Fewer packages, fewer findings.
+2. **Rebuild on the newest patch tag** of that base: point releases regularly fix
+   HIGH/CRITICAL CVEs that an older tag still carries.
+3. **Keep build tooling out of the final image.** Compilers, curl/wget, dev
+   headers all carry CVEs; use a multi-stage build and keep the runtime stage bare.
+4. Still blocked by a genuinely unfixed base CVE after 1-3? There is no
+   self-service override - contact a pipeline maintainer (a maintainer-only bypass
+   exists for reviewed cases).
+
+The run summary shows a Grype and a Trivy table (package, installed version,
+version to upgrade to, CVE count) - work down from the top of those lists.
+
 ## Then
 
 1. Add your processor code and a `Dockerfile` under `code/` (the pipeline builds
-   `code/Dockerfile`). Delete `code/placeholder`.
+   `code/Dockerfile`; the `FROM` must obey the base image constraint above). Delete
+   `code/placeholder`.
 2. Edit `<processor_slug>.cwl` so its inputs/outputs match your processor. Leave
    `dockerPull: __IMAGE__` as is: the pipeline replaces it with the published image.
 3. Create a PUBLIC GitHub repo under your own account, push this content.

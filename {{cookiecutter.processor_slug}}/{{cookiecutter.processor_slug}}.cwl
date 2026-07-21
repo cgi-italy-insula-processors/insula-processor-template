@@ -42,9 +42,11 @@ $graph:
   requirements:
     DockerRequirement:
       dockerPull: __IMAGE__
+    # Runtime network egress is OFF by default. Set to true ONLY if your processor
+    # must reach the network while it runs (most batch EO processors do not).
     NetworkAccess:
-      networkAccess: true
-  # Must match the ENTRYPOINT/command your Dockerfile provides.
+      networkAccess: false
+  # PLACEHOLDER - replace with the exact ENTRYPOINT/command your Dockerfile runs.
   baseCommand: /home/worker/processor/workflow.sh
   inputs:
     input:

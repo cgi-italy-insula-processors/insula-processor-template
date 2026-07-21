@@ -3,6 +3,18 @@ Put your processor code here.
 This directory MUST contain a file named "Dockerfile". The pipeline builds
 ./code/Dockerfile to produce the processor image.
 
+*** BASE IMAGE CONSTRAINT (read before you write the Dockerfile) ***
+Your Dockerfile `FROM` MUST be a PUBLIC image (Docker Hub, quay.io, ghcr.io, ...).
+The build runs in a public pipeline that CANNOT be given private-registry
+credentials (there is nowhere safe to put them), so a private base image will fail
+at build time with a login/pull 401.
+
+*** SECURITY SCAN GATE ***
+The built image is scanned (Grype + Trivy); HIGH/CRITICAL vulnerabilities BLOCK
+publishing, and most come from the base image. Pick a slim, freshly patched base
+(...-slim, alpine, distroless) and keep build tools out of the final image
+(multi-stage build).
+
 The Dockerfile ENTRYPOINT/baseCommand must match the "baseCommand" in the
 .cwl file at the repo root.
 

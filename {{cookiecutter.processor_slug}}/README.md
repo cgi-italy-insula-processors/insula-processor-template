@@ -10,6 +10,21 @@ Insula processor pipeline.
   process (inputs, outputs, command). The `dockerPull` value `__IMAGE__` is filled
   in automatically at build time; do not edit it.
 
+## Base image constraint (important)
+
+The Dockerfile `FROM` must be a **public** image (Docker Hub, quay.io, ghcr.io, ...).
+The build pipeline is public and cannot receive private-registry credentials, so a
+private base image fails at build time with a 401.
+
+## Security scan gate
+
+The pipeline scans the built image (Grype + Trivy) and blocks publishing on
+HIGH/CRITICAL vulnerabilities, including unfixed ones - most come from the base
+image. Prefer a slim, freshly patched base (`-slim`, alpine, distroless), rebuild
+on its newest patch tag, and keep build tools out of the final stage (multi-stage
+build). If a genuinely unfixable base CVE still blocks you, contact a pipeline
+maintainer.
+
 ## Build and deploy
 
 This repository has no CI of its own. Build and deploy it with the

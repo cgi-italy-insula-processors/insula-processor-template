@@ -61,12 +61,14 @@ version to upgrade to, CVE count) - work down from the top of those lists.
 2. Edit `<processor_slug>.cwl` so its inputs/outputs match your processor. Leave
    `dockerPull: __IMAGE__` as is: the pipeline replaces it with the published image.
 3. Create a PUBLIC GitHub repo under your own account, push this content.
-4. Install the builder CLI (once) and authenticate:
+4. **Get access first.** A maintainer must grant you access (add you to the launcher
+   repo) before any build runs. `login` succeeds for ANY GitHub account, so it gives
+   no signal here - but `create` fails at dispatch with a `404 Not Found` until you are
+   onboarded. Ask a maintainer, then install the CLI and authenticate:
    ```
    pipx install git+https://github.com/cgi-italy-insula-processors/insula-processors-builder-cli
    insula-processors-builder login          # GitHub device flow, no token to create
    ```
-   You must first be granted access by a maintainer (they add you to the launcher).
    The login token expires after about 8 hours; re-run `login` when a build fails
    with an auth error (or set a fine-grained PAT via `INSULA_GITHUB_TOKEN` instead).
 5. Build and deploy with the CLI:
@@ -78,10 +80,11 @@ version to upgrade to, CVE count) - work down from the top of those lists.
    quotes - without them the shell can break on special characters - or let the CLI
    prompt for it; a typed or pasted token is not shown in the terminal.
 6. Iterate: push changes, run the command again.
-7. If a maintainer had to force your build (a `--bypass` run) and handed you just the
-   resulting `processor.cwl`, deploy it yourself with no rebuild:
+7. If a maintainer had to force your build (a `--bypass` run), they hand you the
+   published CWL release URL (the `create` output). Deploy it yourself, under your own
+   api token, with no rebuild:
    ```
-   insula-processors-builder deploy --cwl processor.cwl
+   insula-processors-builder deploy --cwl-url <release URL>
    ```
 
 ## CWL notes (what Insula supports)

@@ -5,8 +5,9 @@ cwlVersion: v1.2
 # Rules enforced by the platform:
 #   - $graph must hold EXACTLY ONE Workflow and ONE CommandLineTool.
 #   - The Workflow has a single step whose `run` points at the CommandLineTool id.
-#   - DockerRequirement.dockerPull is REQUIRED. The value __IMAGE__ is replaced by
-#     the build pipeline with the published image reference; do not edit it.
+#   - DockerRequirement.dockerPull is REQUIRED and must stay the placeholder token
+#     the build pipeline injects the published image reference into; do not edit that
+#     line. Keep the token to exactly ONE occurrence (the dockerPull value below).
 #   - Input types: Directory = a STAC catalogue, File = a downloadable file,
 #     plus string / int / long / float / boolean / enum. Outputs must be
 #     File or Directory.

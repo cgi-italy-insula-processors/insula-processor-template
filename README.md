@@ -65,14 +65,24 @@ version to upgrade to, CVE count) - work down from the top of those lists.
    ```
    pipx install git+https://github.com/cgi-italy-insula-processors/insula-processors-builder-cli
    insula-processors-builder login          # GitHub device flow, no token to create
-   export INSULA_API_TOKEN=<your insula.earth api token>
    ```
    You must first be granted access by a maintainer (they add you to the launcher).
+   The login token expires after about 8 hours; re-run `login` when a build fails
+   with an auth error (or set a fine-grained PAT via `INSULA_GITHUB_TOKEN` instead).
 5. Build and deploy with the CLI:
    ```
    insula-processors-builder create --repo-url https://github.com/<you>/<processor_slug>
    ```
+   The deploy step needs an Insula api token (generate at
+   https://insula.earth/awareness/account/api_keys). Set `INSULA_API_TOKEN` in double
+   quotes - without them the shell can break on special characters - or let the CLI
+   prompt for it; a typed or pasted token is not shown in the terminal.
 6. Iterate: push changes, run the command again.
+7. If a maintainer had to force your build (a `--bypass` run) and handed you just the
+   resulting `processor.cwl`, deploy it yourself with no rebuild:
+   ```
+   insula-processors-builder deploy --cwl processor.cwl
+   ```
 
 ## CWL notes (what Insula supports)
 

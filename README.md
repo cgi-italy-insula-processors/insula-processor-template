@@ -5,7 +5,9 @@ pipeline expects.
 
 ## Requirements
 
-- [cookiecutter](https://cookiecutter.readthedocs.io) (`pipx install cookiecutter`)
+- Python 3.11+ and [pipx](https://pipx.pypa.io). No pipx yet? Follow the
+  [Windows and Linux install guide](https://github.com/cgi-italy-insula-processors/insula-processors-builder-cli#prerequisites-python-311-and-pipx).
+- [cookiecutter](https://cookiecutter.readthedocs.io): `pipx install cookiecutter`
 
 ## Use
 
@@ -13,9 +15,7 @@ pipeline expects.
 cookiecutter gh:cgi-italy-insula-processors/insula-processor-template
 ```
 
-Answer the prompts (`processor_name`, `processor_slug`, `processor_description`,
-`processor_version`, `keywords`). Cookiecutter creates a directory named after the
-slug containing:
+Cookiecutter asks five questions, then creates a directory named after the slug:
 
 ```
 <processor_slug>/
@@ -24,6 +24,57 @@ slug containing:
 │   └── placeholder        # replace with your processor + a Dockerfile
 └── <processor_slug>.cwl   # OGC Application Package (edit inputs/outputs)
 ```
+
+### The five parameters
+
+| Prompt | Example answer | What it becomes |
+|--------|----------------|-----------------|
+| `processor_name` | `Daily Evapotranspiration` | Human-readable title. Goes into the CWL Workflow `label`, which Insula shows as the process title, and into the scaffolded README heading. Free text, spaces and capitals welcome. |
+| `processor_slug` | `daily-evapotranspiration` | The machine-readable name (see below). Becomes the created directory name, the `<processor_slug>.cwl` file name, and the CWL Workflow `id`. |
+| `processor_description` | `Estimates daily evapotranspiration from Sentinel-2 and Sentinel-3 acquisitions.` | The CWL Workflow `doc`, shown by Insula as the process description. One line, keep it under 255 characters (Insula truncates beyond that). |
+| `processor_version` | `1.0.0` | The CWL `s:softwareVersion`, shown as the process version. Use semantic versioning (`major.minor.patch`) and raise it when you publish a changed processor. |
+| `keywords` | `earth-observation, evapotranspiration, sentinel-2` | The CWL `s:keywords`. A comma-separated list used for search and categorization. |
+
+### processor_slug: it must be a valid slug
+
+A slug is a string safe to use in URLs, file names, folder names, and identifiers.
+Cookiecutter proposes one derived from `processor_name` (lowercased, spaces and
+underscores turned into hyphens); press Enter to accept it, or type your own
+respecting these rules:
+
+- lowercase letters `a-z`, digits `0-9`, and hyphens `-` only
+- starts with a letter or a digit
+- no spaces, no accented or non-ASCII characters, no `_`, `.`, `/`, `\`, `:` or any
+  other punctuation
+
+| Answer | Verdict |
+|--------|---------|
+| `daily-evapotranspiration` | valid |
+| `s3-eutrophication-monitor` | valid |
+| `Daily Evapotranspiration` | invalid - capitals and spaces |
+| `daily_evapotranspiration` | invalid - underscore |
+| `evapotraspirazione-giornaliera-v1.0` | invalid - dot |
+
+Name your GitHub repository after the slug too. The pipeline derives the published
+container image name from the repository (`<owner>-<repo>`, lowercased) and rejects
+anything outside `^[a-z0-9][a-z0-9._-]*$`, so a slug-shaped repository name keeps the
+image name predictable.
+
+### Example run
+
+```
+$ cookiecutter gh:cgi-italy-insula-processors/insula-processor-template
+  [1/5] processor_name (My EO Processor): Daily Evapotranspiration
+  [2/5] processor_slug (daily-evapotranspiration):
+  [3/5] processor_description (Short description of what this processor does): Estimates daily evapotranspiration from Sentinel-2 and Sentinel-3 acquisitions.
+  [4/5] processor_version (1.0.0): 1.0.0
+  [5/5] keywords (earth-observation, processing): earth-observation, evapotranspiration, sentinel-2
+
+$ ls daily-evapotranspiration
+README.md  code/  daily-evapotranspiration.cwl
+```
+
+Prompt 2 shows the slug derived from your answer to prompt 1; Enter accepts it.
 
 ## Base image constraint (read first)
 
@@ -71,16 +122,18 @@ version to upgrade to, CVE count) - work down from the top of those lists.
    ```
    The login token expires after about 8 hours; re-run `login` when a build fails
    with an auth error (or set a fine-grained PAT via `INSULA_GITHUB_TOKEN` instead).
-5. Build and deploy with the CLI:
+5. Store your Insula api token once (needed by the deploy step; generate it at
+   https://insula.earth/awareness/account/api_keys). The command asks for it without
+   echoing it, so the token never goes through your shell:
+   ```
+   insula-processors-builder set-api-token
+   ```
+6. Build and deploy with the CLI:
    ```
    insula-processors-builder create --repo-url https://github.com/<you>/<processor_slug>
    ```
-   The deploy step needs an Insula api token (generate at
-   https://insula.earth/awareness/account/api_keys). Set `INSULA_API_TOKEN` in double
-   quotes - without them the shell can break on special characters - or let the CLI
-   prompt for it; a typed or pasted token is not shown in the terminal.
-6. Iterate: push changes, run the command again.
-7. If a maintainer had to force your build (a `--bypass` run), they hand you the
+7. Iterate: push changes, run the command again.
+8. If a maintainer had to force your build (a `--bypass` run), they hand you the
    published CWL release URL (the `create` output). Deploy it yourself, under your own
    api token, with no rebuild:
    ```

@@ -35,9 +35,9 @@ insula-processors-builder create --repo-url https://github.com/<you>/{{cookiecut
 ```
 
 Deploying needs an Insula api token (generate at
-https://insula.earth/awareness/account/api_keys): set `INSULA_API_TOKEN` in double
-quotes - without them the shell can break on special characters - or let the CLI
-prompt for it (a typed or pasted token is not shown in the terminal).
+https://insula.earth/awareness/account/api_keys). Store it once with
+`insula-processors-builder set-api-token`: the command asks for the token without
+echoing it, so the value never passes through your shell.
 
 The pipeline clones this repo, builds `code/Dockerfile`, scans and publishes the
 image, injects the published image reference into the CWL, and deploys the process

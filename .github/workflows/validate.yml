@@ -24,20 +24,74 @@ jobs:
           python-version: "3.12"
       - name: Render the template and check the scaffolded CWL
         run: |
-          python -m pip install --quiet cookiecutter
+          python -m pip install --quiet cookiecutter pyyaml
           OUT="$(mktemp -d)"
           cookiecutter --no-input --output-dir "$OUT" .
           # processor_name default "My EO Processor" -> slug "my-eo-processor".
           SLUG="my-eo-processor"
           CWL="$OUT/$SLUG/$SLUG.cwl"
           [ -f "$CWL" ] || { echo "::error::scaffolded CWL not found at $CWL"; exit 1; }
-          fail=0
-          w=$(grep -c 'class: Workflow' "$CWL" || true)
-          c=$(grep -c 'class: CommandLineTool' "$CWL" || true)
-          img=$(grep -c '__IMAGE__' "$CWL" || true)
-          [ "$w" -eq 1 ] || { echo "::error::expected 1 'class: Workflow', found $w"; fail=1; }
-          [ "$c" -eq 1 ] || { echo "::error::expected 1 'class: CommandLineTool', found $c"; fail=1; }
-          [ "$img" -eq 1 ] || { echo "::error::expected exactly 1 __IMAGE__ token, found $img"; fail=1; }
-          grep -q 'dockerPull' "$CWL" || { echo "::error::missing DockerRequirement.dockerPull"; fail=1; }
-          [ "$fail" -eq 0 ] && echo "scaffolded CWL passed structural checks"
-          exit "$fail"
+          python - "$CWL" <<'PY'
+          """Check the scaffolded CWL against the Application Package contract.
+
+          Parses the YAML rather than grepping it, for two reasons a grep gets wrong:
+          `grep -c` counts matching LINES, not occurrences, so two tokens on one line
+          read as one; and a grep counts the header comment that documents __IMAGE__
+          by name. The token is counted here the way the builder-cli's cwlcheck counts
+          it - in the PARSED document's keys and values - because that is exactly what
+          the launcher's global `sed` substitution rewrites into a real image
+          reference. A comment naming the token is rewritten harmlessly.
+          """
+          import sys
+
+          import yaml
+
+          TOKEN = "__IMAGE__"
+
+
+          def count_tokens(node):
+              if isinstance(node, str):
+                  return node.count(TOKEN)
+              if isinstance(node, dict):
+                  return sum(count_tokens(k) + count_tokens(v) for k, v in node.items())
+              if isinstance(node, list):
+                  return sum(count_tokens(item) for item in node)
+              return 0
+
+
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              document = yaml.safe_load(handle)
+
+          problems = []
+          graph = document.get("$graph") if isinstance(document, dict) else None
+          if not isinstance(graph, list):
+              problems.append("the scaffolded CWL declares no '$graph' list")
+              graph = []
+
+          workflows = [e for e in graph if isinstance(e, dict) and e.get("class") == "Workflow"]
+          tools = [e for e in graph if isinstance(e, dict) and e.get("class") == "CommandLineTool"]
+          if len(workflows) != 1:
+              problems.append(f"expected 1 'class: Workflow', found {len(workflows)}")
+          if len(tools) != 1:
+              problems.append(f"expected 1 'class: CommandLineTool', found {len(tools)}")
+
+          docker_pull = None
+          if len(tools) == 1:
+              requirements = tools[0].get("requirements")
+              docker = requirements.get("DockerRequirement") if isinstance(requirements, dict) else None
+              docker_pull = docker.get("dockerPull") if isinstance(docker, dict) else None
+          if not isinstance(docker_pull, str):
+              problems.append("missing DockerRequirement.dockerPull")
+          elif docker_pull.strip() != TOKEN:
+              problems.append(f"dockerPull must be exactly {TOKEN}, found '{docker_pull}'")
+
+          found = count_tokens(document)
+          if found != 1:
+              problems.append(f"expected exactly 1 {TOKEN} token in keys and values, found {found}")
+
+          for problem in problems:
+              print(f"::error::{problem}")
+          if problems:
+              sys.exit(1)
+          print("scaffolded CWL passed structural checks")
+          PY

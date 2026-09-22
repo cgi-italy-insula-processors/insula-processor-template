@@ -10,7 +10,10 @@ cwlVersion: v1.2
 #     line. Keep the token to exactly ONE occurrence (the dockerPull value below).
 #   - Input types: Directory = a STAC catalogue, File = a downloadable file,
 #     plus string / int / long / float / boolean / enum. Outputs must be
-#     File or Directory.
+#     File or Directory. Type names are CASE-SENSITIVE: `String` is not `string`.
+#   - The Workflow and the CommandLineTool must declare the SAME type for an input.
+#   - The Workflow `doc` becomes the process description and is capped at 255
+#     characters; a longer one makes the deploy fail.
 #   - Put each input's label/doc on the CommandLineTool input (below): that is
 #     where the platform reads the user-facing parameter metadata.
 #

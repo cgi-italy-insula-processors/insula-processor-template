@@ -31,7 +31,7 @@ Cookiecutter asks five questions, then creates a directory named after the slug:
 |--------|----------------|-----------------|
 | `processor_name` | `Daily Evapotranspiration` | Human-readable title. Goes into the CWL Workflow `label`, which Insula shows as the process title, and into the scaffolded README heading. Free text, spaces and capitals welcome. |
 | `processor_slug` | `daily-evapotranspiration` | The machine-readable name (see below). Becomes the created directory name, the `<processor_slug>.cwl` file name, and the CWL Workflow `id`. |
-| `processor_description` | `Estimates daily evapotranspiration from Sentinel-2 and Sentinel-3 acquisitions.` | The CWL Workflow `doc`, shown by Insula as the process description. One line, keep it under 255 characters (Insula truncates beyond that). |
+| `processor_description` | `Estimates daily evapotranspiration from Sentinel-2 and Sentinel-3 acquisitions.` | The CWL Workflow `doc`, shown by Insula as the process description. One line, 255 characters maximum: Insula does NOT truncate a longer one, it rejects the deploy. |
 | `processor_version` | `1.0.0` | The CWL `s:softwareVersion`, shown as the process version. Use semantic versioning (`major.minor.patch`) and raise it when you publish a changed processor. |
 | `keywords` | `earth-observation, evapotranspiration, sentinel-2` | The CWL `s:keywords`. A comma-separated list used for search and categorization. |
 
@@ -150,5 +150,42 @@ version to upgrade to, CVE count) - work down from the top of those lists.
   `File` or `Directory`.
 - Put each input's `label` and `doc` on the CommandLineTool input; that is where
   the platform reads the user-facing parameter metadata.
-- `label` -> process title, `doc` -> description (kept under 255 chars),
-  `s:softwareVersion` -> process version.
+- `label` -> process title, `doc` -> description (255 characters MAXIMUM, see the
+  caveats below), `s:softwareVersion` -> process version.
+
+## Editing the CWL: caveats (read before you build)
+
+Insula rejects a malformed Application Package with an HTTP **400 that carries no
+explanation** - the reason stays in the platform's server logs, and you see only
+`400 BAD_REQUEST`. Worse, that rejection happens at the very END of the process,
+after the image has been built, scanned and published. These are the mistakes that
+cause it, in the order they actually bite:
+
+| # | Mistake | What you see | Fix |
+|---|---------|--------------|-----|
+| 1 | Workflow `doc` longer than 255 characters | deploy fails with an unexplained 400 | Shorten it. It is the process description, not the place for an abstract. |
+| 2 | A type spelled with the wrong case: `String`, `Integer`, `Boolean`, `Float` | deploy "succeeds", then the parameter is unusable in Insula | CWL type names are case-sensitive and lowercase except `File` and `Directory`: `string`, `int`, `long`, `float`, `double`, `boolean`. |
+| 3 | The Workflow and the CommandLineTool declaring DIFFERENT types for the same input (`Directory` on one side, `Directory[]` on the other) | accepted, then fails or misbehaves at run time | Keep both sides identical. To accept MANY inputs you need a scatter (see below), not an array on one side only. |
+| 4 | An input/output named on one side only (Workflow, step `in`/`out`, CommandLineTool) | unexplained 400 | Every tool input needs a step `in` entry mapped from a Workflow input; every tool output needs a step `out` entry and a Workflow `outputSource`. |
+| 5 | An output typed as anything other than `File` or `Directory` | unexplained 400 | Outputs are `File` or `Directory` only. |
+| 6 | An unsupported requirement (e.g. `InlineJavascriptRequirement`, `ShellCommandRequirement`) | unexplained 400 | Only `DockerRequirement`, `ResourceRequirement`, `NetworkAccess`, `EnvVarRequirement` and `InitialWorkDirRequirement` are supported. |
+| 7 | `baseCommand` left at the template placeholder | the build and deploy both succeed, the process fails at run time | Set it to the exact entrypoint your Dockerfile runs. |
+| 8 | The `__IMAGE__` token edited away or duplicated | the pipeline run fails at the finalize step | Leave `dockerPull: __IMAGE__` exactly as scaffolded, one occurrence. |
+| 9 | A duplicated YAML key | unexplained 400 | The platform's YAML parser rejects duplicates (your editor will not). |
+
+Fan-out (one task per input product) needs all four of: `scatter: <input>` and
+`scatterMethod: dotproduct` on the step, the scattered Workflow input typed as an
+array (`Directory[]`), the CommandLineTool input typed as the single element
+(`Directory`), and EVERY Workflow output typed as an array.
+
+### Check it before you build
+
+The CLI runs all of the above locally. `create` checks the `.cwl` in your repository
+before it dispatches anything, so a mistake costs seconds instead of a full build:
+
+```
+insula-processors-builder validate --cwl <processor_slug>.cwl
+```
+
+Anything the checks cannot know locally (a process name already taken on the
+platform, an unknown user mount) is still only caught on deploy.

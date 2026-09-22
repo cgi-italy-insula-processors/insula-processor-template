@@ -10,6 +10,34 @@ Insula processor pipeline.
   process (inputs, outputs, command). The `dockerPull` value `__IMAGE__` is filled
   in automatically at build time; do not edit it.
 
+## Editing the CWL: caveats
+
+Insula rejects a malformed Application Package with an HTTP 400 that carries no
+explanation, at the END of the pipeline - after the image was built, scanned and
+published. Check yours locally first; it takes seconds:
+
+```
+insula-processors-builder validate --cwl {{cookiecutter.processor_slug}}.cwl
+```
+
+`create` runs the same checks on the repository before dispatching a build. The
+mistakes they catch, most common first:
+
+- the Workflow `doc` longer than **255 characters** (it is the process description,
+  and the platform caps it)
+- a type spelled with the wrong case: it is `string`, `int`, `long`, `float`,
+  `double`, `boolean`, `File`, `Directory`. `String` is not a CWL type
+- the Workflow and the CommandLineTool declaring different types for the same input
+- an input or output present on one side only (Workflow, step `in`/`out`, tool)
+- an output typed as anything but `File` or `Directory`
+- a requirement outside `DockerRequirement`, `ResourceRequirement`, `NetworkAccess`,
+  `EnvVarRequirement`, `InitialWorkDirRequirement`
+- the `__IMAGE__` token edited, removed or duplicated
+
+Two things the checks CANNOT catch: `baseCommand` still set to the template
+placeholder instead of your real entrypoint (it fails at run time), and anything
+that depends on platform state, such as a process name already in use.
+
 ## Base image constraint (important)
 
 The Dockerfile `FROM` must be a **public** image (Docker Hub, quay.io, ghcr.io, ...).

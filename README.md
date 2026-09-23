@@ -157,9 +157,11 @@ version to upgrade to, CVE count) - work down from the top of those lists.
 
 Insula rejects a malformed Application Package with an HTTP **400 that carries no
 explanation** - the reason stays in the platform's server logs, and you see only
-`400 BAD_REQUEST`. Worse, that rejection happens at the very END of the process,
-after the image has been built, scanned and published. These are the mistakes that
-cause it, in the order they actually bite:
+`400 BAD_REQUEST`. A few shapes are worse still: the platform does not validate them
+at all, it casts them, so they come back as a bare `500 INTERNAL_SERVER_ERROR`.
+Worse again, that rejection happens at the very END of the process, after the image
+has been built, scanned and published. These are the mistakes that cause it, in the
+order they actually bite:
 
 | # | Mistake | What you see | Fix |
 |---|---------|--------------|-----|
@@ -172,11 +174,24 @@ cause it, in the order they actually bite:
 | 7 | `baseCommand` left at the template placeholder | the build and deploy both succeed, the process fails at run time | Set it to the exact entrypoint your Dockerfile runs. |
 | 8 | The `__IMAGE__` token edited away or duplicated | the pipeline run fails at the finalize step | Leave `dockerPull: __IMAGE__` exactly as scaffolded, one occurrence. |
 | 9 | A duplicated YAML key | unexplained 400 | The platform's YAML parser rejects duplicates (your editor will not). |
+| 10 | `scatter` on the step without `ScatterFeatureRequirement` on the Workflow | deploy fails with an unexplained **500** | Declare the requirement (see below). The platform decides a package is fan-out by that requirement ALONE and never looks at `scatter`; without it your array outputs hit a scalar cast and the deploy dies with no message at all. |
+| 11 | An array type (`Directory[]`) on a CommandLineTool output, or on a Workflow output in a package that is not fan-out | unexplained **500** | Arrays belong on the Workflow side of a fan-out only. The tool always produces one element. |
 
-Fan-out (one task per input product) needs all four of: `scatter: <input>` and
-`scatterMethod: dotproduct` on the step, the scattered Workflow input typed as an
-array (`Directory[]`), the CommandLineTool input typed as the single element
-(`Directory`), and EVERY Workflow output typed as an array.
+Fan-out (one task per input product) needs all five of: `ScatterFeatureRequirement`
+declared in the Workflow's `requirements`, `scatter: <input>` and `scatterMethod:
+dotproduct` on the step, the scattered Workflow input typed as an array
+(`Directory[]`), the CommandLineTool input typed as the single element
+(`Directory`), and EVERY Workflow output typed as an array:
+
+```yaml
+- class: Workflow
+  id: my-processor
+  requirements:
+  - class: ScatterFeatureRequirement
+```
+
+Declaring the requirement without a `scatter` on the step is equally fatal, and
+equally silent: that combination is the other unexplained 500.
 
 ### Check it before you build
 

@@ -16,6 +16,13 @@ cwlVersion: v1.2
 #     characters; a longer one makes the deploy fail.
 #   - Put each input's label/doc on the CommandLineTool input (below): that is
 #     where the platform reads the user-facing parameter metadata.
+#   - FAN-OUT (one task per input product) is opt-in and all-or-nothing. It needs
+#     `ScatterFeatureRequirement` in the WORKFLOW's requirements, `scatter` +
+#     `scatterMethod: dotproduct` on the step, the scattered Workflow input as an
+#     array, the CommandLineTool input as the single element, and EVERY Workflow
+#     output as an array. The platform detects fan-out by that requirement alone,
+#     so declaring one half without the other fails the deploy with a bare 500.
+#     This scaffold is NOT a fan-out: leave all of it out unless you need it.
 #
 # Replace the single example `input` / `output` with the real parameters of your
 # processor, keeping the Workflow and CommandLineTool sides in sync.
